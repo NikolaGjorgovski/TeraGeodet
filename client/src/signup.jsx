@@ -1,4 +1,6 @@
 import { useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap');
@@ -17,8 +19,6 @@ const styles = `
     --teal-dark: #0F6E56;
     --teal-deeper: #085041;
     --teal-light: #E1F5EE;
-    --red: #E24B4A;
-    --red-light: rgba(226,75,74,0.10);
   }
 
   body {
@@ -113,13 +113,6 @@ const styles = `
 
   .su-input::placeholder { color: var(--text-tertiary); font-weight: 300; }
 
-  .su-input.invalid {
-    border-color: var(--red);
-    box-shadow: 0 0 0 3px var(--red-light);
-  }
-
-  .su-input.valid { border-color: var(--teal); }
-
   .su-icon-wrap { position: relative; }
   .su-icon-wrap .su-input { padding-left: 38px; }
   .su-icon {
@@ -154,28 +147,6 @@ const styles = `
 
   .su-mb { margin-bottom: 1rem; }
 
-  .su-strength-bar {
-    height: 3px; border-radius: 2px;
-    background: #e8e8e5;
-    margin-top: 8px; overflow: hidden;
-  }
-  .su-strength-fill {
-    height: 100%; border-radius: 2px;
-    transition: width 0.3s, background 0.3s;
-  }
-  .su-strength-label {
-    font-size: 11px;
-    margin-top: 4px;
-    min-height: 16px;
-  }
-
-  .su-error {
-    font-size: 11px;
-    color: var(--red);
-    margin-top: 4px;
-    min-height: 16px;
-  }
-
   .su-btn {
     width: 100%;
     height: 44px;
@@ -204,53 +175,7 @@ const styles = `
   }
   .su-signin a { color: var(--teal); text-decoration: none; font-weight: 400; }
   .su-signin a:hover { text-decoration: underline; }
-
-  .su-success {
-    text-align: center;
-    padding: 1rem 0 0.5rem;
-  }
-  .su-success-icon {
-    width: 56px; height: 56px;
-    border-radius: 50%;
-    background: var(--teal-light);
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 1.25rem;
-  }
-  .su-success h2 {
-    font-family: 'DM Serif Display', serif;
-    font-size: 22px; font-weight: 400;
-    color: var(--text-primary);
-    margin-bottom: 0.5rem;
-  }
-  .su-success p {
-    font-size: 14px;
-    color: var(--text-secondary);
-    font-weight: 300;
-    line-height: 1.6;
-  }
-  .su-success .su-btn {
-    max-width: 200px;
-    margin: 1.5rem auto 0;
-  }
 `;
-
-const STRENGTH_LEVELS = [
-  { w: "0%", c: "transparent", t: "" },
-  { w: "25%", c: "#E24B4A", t: "Weak" },
-  { w: "50%", c: "#EF9F27", t: "Fair" },
-  { w: "75%", c: "#1D9E75", t: "Good" },
-  { w: "100%", c: "#0F6E56", t: "Strong" },
-];
-
-function getStrength(val) {
-  const score = [
-    val.length >= 8,
-    /[A-Z]/.test(val),
-    /[0-9]/.test(val),
-    /[^A-Za-z0-9]/.test(val),
-  ].filter(Boolean).length;
-  return STRENGTH_LEVELS[score];
-}
 
 function EyeIcon() {
   return (
@@ -268,90 +193,25 @@ function EyeIcon() {
   );
 }
 
-function PasswordField({
-  id,
-  label,
-  value,
-  onChange,
-  placeholder,
-  showPw,
-  onToggle,
-  error,
-}) {
-  return (
-    <div className="su-mb">
-      <label className="su-label" htmlFor={id}>
-        {label}
-      </label>
-      <div className="su-pw-wrap">
-        <input
-          id={id}
-          type={showPw ? "text" : "password"}
-          className={`su-input${error ? " invalid" : value ? " valid" : ""}`}
-          placeholder={placeholder}
-          value={value}
-          onChange={onChange}
-          autoComplete={id === "password" ? "new-password" : "new-password"}
-        />
-        <button
-          className="su-toggle-pw"
-          type="button"
-          onClick={onToggle}
-          aria-label="Toggle password visibility"
-        >
-          <EyeIcon />
-        </button>
-      </div>
-      {error && <div className="su-error">{error}</div>}
-    </div>
-  );
-}
-
 export default function SignupForm() {
-  const [fields, setFields] = useState({
-    fname: "",
-    lname: "",
-    email: "",
-    password: "",
-    confirmPw: "",
-  });
-  const [errors, setErrors] = useState({});
   const [showPw, setShowPw] = useState(false);
   const [showCpw, setShowCpw] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
 
-  const strength = getStrength(fields.password);
+  const [fName, setFname] = useState();
+  const [lName, setLname] = useState();
+  const [email, setEmail] = useState();
+  const [password, setPassword] = useState();
+  const navigate = useNavigate();
 
-  const set = (key) => (e) => {
-    const val = e.target.value;
-    setFields((f) => ({ ...f, [key]: val }));
-    setErrors((err) => ({ ...err, [key]: "" }));
-  };
-
-  const validate = () => {
-    const e = {};
-    if (!fields.fname.trim()) e.fname = "Required";
-    if (!fields.lname.trim()) e.lname = "Required";
-    if (!fields.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email))
-      e.email = "Enter a valid email address";
-    if (fields.password.length < 8)
-      e.password = "Password must be at least 8 characters";
-    if (!fields.confirmPw || fields.confirmPw !== fields.password)
-      e.confirmPw = "Passwords do not match";
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
-  const handleSubmit = () => {
-    if (validate()) setSubmitted(true);
-  };
-
-  const handleReset = () => {
-    setFields({ fname: "", lname: "", email: "", password: "", confirmPw: "" });
-    setErrors({});
-    setShowPw(false);
-    setShowCpw(false);
-    setSubmitted(false);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    axios
+      .post("http://localhost:3001/register", { fName, lName, email, password })
+      .then((result) => {
+        console.log(result);
+        navigate("/login");
+      })
+      .catch((err) => console.log(err));
   };
 
   return (
@@ -361,181 +221,121 @@ export default function SignupForm() {
         <div className="su-card">
           <div className="su-accent-bar" />
 
-          {!submitted ? (
-            <>
-              <div className="su-brand-icon">
-                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                  <path
-                    d="M4 11C4 7.13 7.13 4 11 4s7 3.13 7 7-3.13 7-7 7-7-3.13-7-7z"
-                    fill="#1D9E75"
-                    opacity="0.25"
-                  />
-                  <path
-                    d="M7.5 11.5l2.5 2.5 5-5"
-                    stroke="#0F6E56"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-
-              <h1>Create your account</h1>
-              <p className="su-subtitle">
-                Get started — it only takes a minute.
-              </p>
-
-              {/* Name row */}
-              <div className="su-name-row">
-                <div>
-                  <label className="su-label" htmlFor="fname">
-                    First name
-                  </label>
-                  <input
-                    id="fname"
-                    type="text"
-                    className={`su-input${errors.fname ? " invalid" : fields.fname ? " valid" : ""}`}
-                    placeholder="Ada"
-                    value={fields.fname}
-                    onChange={set("fname")}
-                    autoComplete="given-name"
-                  />
-                  {errors.fname && (
-                    <div className="su-error">{errors.fname}</div>
-                  )}
-                </div>
-                <div>
-                  <label className="su-label" htmlFor="lname">
-                    Last name
-                  </label>
-                  <input
-                    id="lname"
-                    type="text"
-                    className={`su-input${errors.lname ? " invalid" : fields.lname ? " valid" : ""}`}
-                    placeholder="Lovelace"
-                    value={fields.lname}
-                    onChange={set("lname")}
-                    autoComplete="family-name"
-                  />
-                  {errors.lname && (
-                    <div className="su-error">{errors.lname}</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Email */}
-              <div className="su-mb">
-                <label className="su-label" htmlFor="email">
-                  Email address
-                </label>
-                <div className="su-icon-wrap">
-                  <svg
-                    className="su-icon"
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.2"
-                  >
-                    <rect x="1" y="3" width="14" height="10" rx="2" />
-                    <path d="M1 5.5l7 4.5 7-4.5" />
-                  </svg>
-                  <input
-                    id="email"
-                    type="email"
-                    className={`su-input${errors.email ? " invalid" : fields.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email) ? " valid" : ""}`}
-                    placeholder="you@example.com"
-                    value={fields.email}
-                    onChange={set("email")}
-                    autoComplete="email"
-                  />
-                </div>
-                {errors.email && <div className="su-error">{errors.email}</div>}
-              </div>
-
-              {/* Password */}
-              <div className="su-mb">
-                <label className="su-label" htmlFor="password">
-                  Password
-                </label>
-                <div className="su-pw-wrap">
-                  <input
-                    id="password"
-                    type={showPw ? "text" : "password"}
-                    className={`su-input${errors.password ? " invalid" : fields.password.length >= 8 ? " valid" : ""}`}
-                    placeholder="Min. 8 characters"
-                    value={fields.password}
-                    onChange={set("password")}
-                    autoComplete="new-password"
-                  />
-                  <button
-                    className="su-toggle-pw"
-                    type="button"
-                    onClick={() => setShowPw((v) => !v)}
-                    aria-label="Toggle password"
-                  >
-                    <EyeIcon />
-                  </button>
-                </div>
-                <div className="su-strength-bar">
-                  <div
-                    className="su-strength-fill"
-                    style={{ width: strength.w, background: strength.c }}
-                  />
-                </div>
-                <div
-                  className="su-strength-label"
-                  style={{ color: strength.c }}
-                >
-                  {strength.t}
-                </div>
-                {errors.password && (
-                  <div className="su-error">{errors.password}</div>
-                )}
-              </div>
-
-              {/* Confirm password */}
-              <PasswordField
-                id="confirm-pw"
-                label="Confirm password"
-                value={fields.confirmPw}
-                onChange={set("confirmPw")}
-                placeholder="Repeat password"
-                showPw={showCpw}
-                onToggle={() => setShowCpw((v) => !v)}
-                error={errors.confirmPw}
+          <div className="su-brand-icon">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+              <path
+                d="M4 11C4 7.13 7.13 4 11 4s7 3.13 7 7-3.13 7-7 7-7-3.13-7-7z"
+                fill="#1D9E75"
+                opacity="0.25"
               />
+              <path
+                d="M7.5 11.5l2.5 2.5 5-5"
+                stroke="#0F6E56"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
 
-              <button className="su-btn" onClick={handleSubmit}>
-                Create account
-              </button>
+          <h1>Create your account</h1>
+          <p className="su-subtitle">Get started — it only takes a minute.</p>
 
-              <p className="su-signin">
-                Already have an account? <a href="/login">Sign in</a>
-              </p>
-            </>
-          ) : (
-            <div className="su-success">
-              <div className="su-success-icon">
-                <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                  <path
-                    d="M6 14l6 6 10-10"
-                    stroke="#0F6E56"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+          <form onSubmit={handleSubmit}>
+            {/* First & Last name */}
+            <div className="su-name-row">
+              <div>
+                <label className="su-label" htmlFor="fname">
+                  First name
+                </label>
+                <input
+                  id="fname"
+                  name="fname"
+                  type="text"
+                  className="su-input"
+                  placeholder="Ada"
+                  autoComplete="given-name"
+                  onChange={(e) => setFname(e.target.value)}
+                />
               </div>
-              <h2>You're all set!</h2>
-              <p>
-                Welcome aboard. Check your inbox at{" "}
-                <strong>{fields.email}</strong> to verify your account.
-              </p>
-              <button className="su-btn" onClick={handleReset}>
-                Back to sign up
-              </button>
+              <div>
+                <label className="su-label" htmlFor="lname">
+                  Last name
+                </label>
+                <input
+                  id="lname"
+                  name="lname"
+                  type="text"
+                  className="su-input"
+                  placeholder="Lovelace"
+                  autoComplete="family-name"
+                  onChange={(e) => setLname(e.target.value)}
+                />
+              </div>
             </div>
-          )}
+
+            {/* Email */}
+            <div className="su-mb">
+              <label className="su-label" htmlFor="email">
+                Email address
+              </label>
+              <div className="su-icon-wrap">
+                <svg
+                  className="su-icon"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                >
+                  <rect x="1" y="3" width="14" height="10" rx="2" />
+                  <path d="M1 5.5l7 4.5 7-4.5" />
+                </svg>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  className="su-input"
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div className="su-mb">
+              <label className="su-label" htmlFor="password">
+                Password
+              </label>
+              <div className="su-pw-wrap">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPw ? "text" : "password"}
+                  className="su-input"
+                  placeholder="Min. 8 characters"
+                  autoComplete="new-password"
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  className="su-toggle-pw"
+                  type="button"
+                  onClick={() => setShowPw((v) => !v)}
+                  aria-label="Toggle password visibility"
+                >
+                  <EyeIcon />
+                </button>
+              </div>
+            </div>
+
+            <button className="su-btn" type="submit">
+              Create account
+            </button>
+          </form>
+
+          <p className="su-signin">
+            Already have an account? <a href="/login">Sign in</a>
+          </p>
         </div>
       </div>
     </>
