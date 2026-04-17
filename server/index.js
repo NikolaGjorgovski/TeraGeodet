@@ -9,11 +9,18 @@ app.use(cors());
 
 mongoose.connect("mongodb://127.0.0.1:27017/TeraGeodet");
 
-app.post("/login", (req, res) => {
+app.post("/login", async (req, res) => {
   const { email, password } = req.body;
-  UserModel.findOne({ email: email }).then((user) => {
+
+  try {
+    // 1. Find the user by email
+    const user = await UserModel.findOne({ email: email });
+
     if (user) {
-      if (user.password === password) {
+      // 2. Use our custom method to compare the typed password with the database hash
+      const isMatch = await user.comparePassword(password);
+
+      if (isMatch) {
         res.json("Success");
       } else {
         res.json("The password is incorrect");
@@ -21,13 +28,19 @@ app.post("/login", (req, res) => {
     } else {
       res.json("No record existed");
     }
-  });
+  } catch (err) {
+    res.status(500).json(err);
+  }
 });
 
 app.post("/register", (req, res) => {
   UserModel.create(req.body)
     .then((users) => res.json(users))
-    .catch((err) => res.json(err));
+    .catch((err) => {
+      // This will print the exact reason it failed to your terminal!
+      console.log("Registration Error:", err);
+      res.json(err);
+    });
 });
 
 app.listen(3001, () => {

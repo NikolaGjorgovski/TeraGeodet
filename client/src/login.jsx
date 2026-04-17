@@ -361,7 +361,7 @@ export default function LoginForm() {
           </button>
 
           <p className="li-signup">
-            Don't have an account? <a href="#">Sign up</a>
+            Don't have an account? <a href="/register">Sign up</a>
           </p>
         </div>
       </div>
