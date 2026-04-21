@@ -6,6 +6,10 @@ const UserSchema = new mongoose.Schema({
   lName: String,
   email: String,
   password: String,
+  role: {
+    type: String,
+    default: "user",
+  },
 });
 
 // This function runs automatically BEFORE a user is saved to the database

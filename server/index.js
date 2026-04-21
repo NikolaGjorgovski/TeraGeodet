@@ -1,6 +1,8 @@
+require("dotenv").config(); // Add this at the very top
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 const UserModel = require("./models/User");
 
 const app = express();
@@ -9,40 +11,77 @@ app.use(cors());
 
 mongoose.connect("mongodb://127.0.0.1:27017/TeraGeodet");
 
+// ─── LOGIN ────────────────────────────────────────────────────────────────────
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // 1. Find the user by email
-    const user = await UserModel.findOne({ email: email });
+    const user = await UserModel.findOne({ email });
 
-    if (user) {
-      // 2. Use our custom method to compare the typed password with the database hash
-      const isMatch = await user.comparePassword(password);
-
-      if (isMatch) {
-        res.json("Success");
-      } else {
-        res.json("The password is incorrect");
-      }
-    } else {
-      res.json("No record existed");
+    if (!user) {
+      return res
+        .status(404)
+        .json({ message: "No account found with that email." });
     }
+
+    const isMatch = await user.comparePassword(password);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: "Incorrect password." });
+    }
+
+    // Sign a JWT containing the user's id and role
+    const token = jwt.sign(
+      {
+        id: user._id,
+        role: user.role,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" },
+    );
+
+    // Send back the token and basic user info
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        fName: user.fName,
+        lName: user.lName,
+        email: user.email,
+        role: user.role,
+      },
+    });
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({ message: "Server error.", error: err.message });
   }
 });
 
-app.post("/register", (req, res) => {
-  UserModel.create(req.body)
-    .then((users) => res.json(users))
-    .catch((err) => {
-      // This will print the exact reason it failed to your terminal!
-      console.log("Registration Error:", err);
-      res.json(err);
-    });
+// ─── REGISTER ─────────────────────────────────────────────────────────────────
+app.post("/register", async (req, res) => {
+  try {
+    const { fName, lName, email, password } = req.body;
+
+    // Basic validation
+    if (!fName || !lName || !email || !password) {
+      return res.status(400).json({ message: "All fields are required." });
+    }
+
+    // Check if email is already taken
+    const existing = await UserModel.findOne({ email });
+    if (existing) {
+      return res
+        .status(409)
+        .json({ message: "An account with that email already exists." });
+    }
+
+    const newUser = await UserModel.create({ fName, lName, email, password });
+
+    res.status(201).json({ message: "Account created successfully." });
+  } catch (err) {
+    res.status(500).json({ message: "Server error.", error: err.message });
+  }
 });
 
 app.listen(3001, () => {
-  console.log("server is running");
+  console.log("Server is running on port 3001");
 });

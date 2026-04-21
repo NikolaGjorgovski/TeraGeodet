@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "./AuthContext";
 
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap');
@@ -251,19 +252,33 @@ export default function LoginForm() {
 
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    axios
-      .post("http://localhost:3001/login", { email, password })
-      .then((result) => {
-        console.log(result);
-        if (result.data === "Success") {
-          navigate("/home");
-        }
-      })
-      .catch((err) => console.log(err));
-  };
+  const { login } = useAuth();
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      const result = await axios.post("http://localhost:3001/login", {
+        email,
+        password,
+      });
+      const { token, user } = result.data;
+
+      login(token, user); // ← replaces the two localStorage.setItem calls
+
+      if (user.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/home");
+      }
+    } catch (err) {
+      if (err.response) {
+        alert(err.response.data.message);
+      } else {
+        alert("Something went wrong. Please try again.");
+      }
+    }
+  };
   return (
     <>
       <style>{styles}</style>
