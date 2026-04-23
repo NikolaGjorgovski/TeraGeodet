@@ -4,12 +4,19 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const UserModel = require("./models/User");
+const requestRoutes = require("./routes/requests");
+
+mongoose.connect("mongodb://127.0.0.1:27017/TeraGeodet");
 
 const app = express();
 app.use(express.json());
-app.use(cors());
-
-mongoose.connect("mongodb://127.0.0.1:27017/TeraGeodet");
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  }),
+);
+app.use("/requests", requestRoutes);
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 app.post("/login", async (req, res) => {
@@ -35,6 +42,9 @@ app.post("/login", async (req, res) => {
       {
         id: user._id,
         role: user.role,
+        fName: user.fName,
+        lName: user.lName,
+        email: user.email,
       },
       process.env.JWT_SECRET,
       { expiresIn: "7d" },
