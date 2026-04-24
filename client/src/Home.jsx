@@ -1,9 +1,18 @@
+import { useState } from "react";
 import Navbar from "./Navbar";
 import { useAuth } from "./AuthContext";
 import RequestForm from "./RequestForm";
+import RequestStatus from "./RequestStatus";
 
 export default function Home() {
   const { user } = useAuth();
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Every time a new request is submitted, increment the trigger
+  // which causes RequestStatus to re-fetch automatically
+  const handleRequestSubmitted = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
 
   return (
     <>
@@ -30,7 +39,8 @@ export default function Home() {
           TeraGeodet — Surveying Services
         </p>
 
-        <RequestForm />
+        <RequestForm onRequestSubmitted={handleRequestSubmitted} />
+        <RequestStatus refreshTrigger={refreshTrigger} />
       </div>
     </>
   );
