@@ -7,6 +7,7 @@ import Home from "./Home";
 import AdminDashboard from "./AdminDashboard";
 import ProtectedRoute from "./ProtectedRoute";
 import { useAuth } from "./AuthContext";
+import Landing from "./Landing";
 
 function RedirectIfLoggedIn({ children }) {
   const { user, loading } = useAuth();
@@ -21,7 +22,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* Public routes */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Landing />} />
         <Route
           path="/login"
           element={

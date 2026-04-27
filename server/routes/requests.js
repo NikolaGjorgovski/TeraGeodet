@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const RequestModel = require("../models/Request");
 const { protect, adminOnly } = require("../middleware/auth");
+const { sendNewRequestEmail } = require("../utils/mailer");
 
 // ─── POST /requests ───────────────────────────────────────────────────────────
 router.post("/", protect, async (req, res) => {
@@ -37,6 +38,15 @@ router.post("/", protect, async (req, res) => {
       title,
       description,
     });
+
+    // Send email notification to admin
+    // We use try/catch separately so a mail failure doesn't fail the whole request
+    // Fire and forget — don't wait for the email to send
+    sendNewRequestEmail(newRequest)
+      .then(() => console.log("Admin notification email sent."))
+      .catch((mailErr) =>
+        console.log("Email failed but request was saved:", mailErr.message),
+      );
 
     res.status(201).json({
       message: "Request submitted successfully.",
